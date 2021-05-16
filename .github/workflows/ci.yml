@@ -1,0 +1,50 @@
+name: CI
+
+on: workflow_dispatch
+#on:
+#  push:
+#    branches:
+#      - master
+#    tags-ignore:
+#      - '*'
+#  pull_request:
+#    branches:
+#      - master
+#    tags-ignore:
+#      - '*'
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - nightly
+        target:
+          - x86_64-unknown-linux-musl
+          - x86_64-pc-windows-msvc
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+
+    name: Rust ${{ matrix.os }} ${{ matrix.rust }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Setup Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: default
+        toolchain: ${{ matrix.rust }}
+        override: true
+    - name: Formatter
+      run: cargo clippy
+    - name: Build
+      run: cargo build --release
+    - name: Tests
+      run: cargo test
+      continue-on-error: ${{ matrix.rust == 'nightly' }}

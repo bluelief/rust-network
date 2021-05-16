@@ -1,0 +1,14 @@
+[alias]
+b = "build"
+t = "test"
+r = "run"
+
+
+[target.x86_64-unknown-linux-musl]
+
+
+[target.x86_64-pc-windows-msvc]
+rustflags = [
+    "-C",
+    "target-feature=+crt-static",
+]

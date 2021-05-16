@@ -1,0 +1,63 @@
+name: Upload to release
+
+on: workflow_dispatch
+#on:
+#  push:
+#    tags:
+#      - "*"
+
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - nightly
+        target:
+          - x86_64-unknown-linux-musl
+          - x86_64-pc-windows-msvc
+        include:
+          - target: x86_64-unknown-linux-musl
+            os: ubuntu-latest
+          - target: x86_64-pc-windows-msvc
+            os: windows-latest
+
+    name: Rust ${{ matrix.os }} ${{ matrix.rust }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Installing needed Ubuntu dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y musl-tools
+
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: default
+          toolchain: ${{ matrix.rust }}
+          target: ${{ matrix.target }}
+          override: true
+
+      - name: Build
+        run: cargo build --release --target=${{ matrix.target }}
+
+      - name: Rename release binary ${{ matrix.os }}
+        if: matrix.os == 'ubuntu-latest'
+        run: mv target/${{ matrix.target }}/release/password-generate target/${{ matrix.target }}/release/${{ matrix.os }}-${{ matrix.rust }}-${{ matrix.target }}-password-generate.out
+
+      - name: Rename release binary ${{ matrix.os }}
+        if: matrix.os == 'windows-latest'
+        run: mv target/${{ matrix.target }}/release/password-generate.exe target/${{ matrix.target }}/release/${{ matrix.os }}-${{ matrix.rust }}-${{ matrix.target }}-password-generate.exe
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            target/${{ matrix.target }}/release//${{ matrix.os }}-${{ matrix.rust }}-${{ matrix.target }}-password-generate.*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
